@@ -2,6 +2,7 @@ package com.ltrojanowski.testaffected
 
 import sbt.util.Logger
 import sbt.{Project, ResolvedProject}
+import scala.collection.immutable.Seq
 
 sealed trait ProjectSubset
 case object DEPENDENT_PROJECTS extends ProjectSubset
@@ -38,15 +39,26 @@ class AffectedModuleDetectorImpl(
     changedModules.map(dependencyTracker.findAllAffected)
   }
 
+  private val projectPaths = projectsContext.projectsByPath.keys
+
   def filePathToProject(filePath: String): Option[ResolvedProject] = {
     import projectsContext._
-    for {
+
+    val projectPath = projectPaths.filter(filePath.startsWith).toSeq match {
+      case Nil => None
+      case paths: Seq[String] => Some(paths.maxBy(_.length))
+    }
+
+    projectPath.flatMap(projectsByPath.get)
+
+    /*for {
       baseProjectPath <- filePath
         .split("/src")
         .headOption
         .fold(projectsByPath.find(pair => filePath.startsWith(pair._1)).map(_._1))(Some(_))
       //    logger.info(s"baseProjectPath: $baseProjectPath")
       r <- projectsByPath.get(baseProjectPath)
-    } yield r
+    } yield r*/
+
   }
 }

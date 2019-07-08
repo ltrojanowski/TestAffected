@@ -50,7 +50,7 @@ object TestAffected extends AutoPlugin {
     logger.info(s"projectsByPath: $projectsByPath")
 
     val modulesToTest: Option[Set[ResolvedProject]] = affectedModules.findAffectedModules()
-
+    logger.info(s"modules to test: $modulesToTest")
 
     modulesToTest.map(modules => modules.map(_.id).foldLeft(Command.process(s"; project $foo; ", s)){
       case (state, moduleId) => Command.process(s"; project $moduleId; test", state)
