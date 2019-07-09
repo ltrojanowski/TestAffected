@@ -60,18 +60,6 @@ object TestAffected extends AutoPlugin {
           }
       )
       .getOrElse(Command.process("test", s))
-
-//    Command.process("; project common; test", s)
-//    (test in Test).map(_ => logger.info("test did run"))
-//    affectedModules.findAffectedModules() match {
-//      case Some(affectedProjects) => affectedProjects.foreach(p => {
-//        val testCommand = s"; project ${p.id}; test"
-//        logger.info(testCommand)
-//        MainLoop.processCommand(Exec(testCommand, None), s)
-//      } )
-//      case None => MainLoop.processCommand(Exec("test", None), s)
-//    }
-//    s
   }
 
 }
