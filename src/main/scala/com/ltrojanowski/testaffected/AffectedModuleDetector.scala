@@ -4,20 +4,9 @@ import sbt.util.Logger
 import sbt.{Project, ResolvedProject}
 import scala.collection.immutable.Seq
 
-sealed trait ProjectSubset
-case object DEPENDENT_PROJECTS extends ProjectSubset
-case object CHANGED_PROJECTS extends ProjectSubset
-case object ALL_AFFECTED_PROJECTS extends ProjectSubset
-
 abstract class AffectedModuleDetector {
 
-  def shouldInclude(project: Project): Boolean
-
-}
-
-class AcceptAll extends AffectedModuleDetector {
-
-  override def shouldInclude(project: Project) = true
+  def findAffectedModules(): Option[Set[ResolvedProject]]
 
 }
 
@@ -25,7 +14,8 @@ class AffectedModuleDetectorImpl(
     logger: Logger,
     gitClient: GitClient,
     dependencyTracker: DependencyTracker
-)(implicit projectsContext: ProjectsContext) {
+)(implicit projectsContext: ProjectsContext)
+    extends AffectedModuleDetector {
 
   def findAffectedModules(): Option[Set[ResolvedProject]] = { // if None either git failed or is not in this repo
     val lastMergeSha = gitClient.findPreviousMergeCL()
@@ -39,7 +29,7 @@ class AffectedModuleDetectorImpl(
 
   private val projectPaths = projectsContext.projectsByPath.keys
 
-  def filePathToProject(filePath: String): Option[ResolvedProject] = {
+  private def filePathToProject(filePath: String): Option[ResolvedProject] = {
     import projectsContext._
 
     val projectPath = projectPaths.filter(filePath.startsWith).toSeq match {

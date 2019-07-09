@@ -33,9 +33,9 @@ object TestAffected extends AutoPlugin {
 
     implicit val projectsContext: ProjectsContext = ProjectsContext(projects, projectsMap, projectsByPath)
 
-    val foo = extracted.currentProject.id
+    val currentProject   = extracted.currentProject
+    val currentProjectId = currentProject.id
 
-    val currentProject    = projectsContext
     val logger            = extracted.get(sLog)
     val workingDir        = file(".").getAbsoluteFile
     val commandRunner     = new CommandRunnerImpl(workingDir, logger)
@@ -43,23 +43,37 @@ object TestAffected extends AutoPlugin {
     val dependencyTracker = new DependencyTrackerImpl(logger)
     val affectedModules   = new AffectedModuleDetectorImpl(logger, gitClient, dependencyTracker)
 
-    logger.info(s"foo: $foo")
     logger.info(s"workingDir: $workingDir")
-    val base = projectsContext.projectsByPath.get(workingDir.getAbsolutePath)
-    logger.info(s"base: $base")
     logger.info(s"projectsByPath: $projectsByPath")
 
     val modulesToTest: Option[Set[ResolvedProject]] = affectedModules.findAffectedModules()
-    logger.info(s"modules to test: $modulesToTest")
 
-    modulesToTest
-      .map(
-        modules =>
-          modules.map(_.id).foldLeft(Command.process(s"; project $foo; ", s)) {
-            case (state, moduleId) => Command.process(s"; project $moduleId; test", state)
-          }
-      )
-      .getOrElse(Command.process("test", s))
+    val shouldTestEverything = modulesToTest match {
+      case None => logger.warn("Failed to obtain git diff. Will test everything."); true
+      case Some(toTest) if toTest.contains(currentProject) => {
+        logger.info(s"Affected modules contain root module:\n  - ${toTest
+          .map(
+            p =>
+              if (p.id == currentProjectId) {
+                s"p.id <- (root project)"
+              } else {
+                p.id
+              }
+          )
+          .mkString("\n  - ")}\n\n Will test everything.")
+        true
+      }
+      case Some(toTest) => logger.info(s"Modules to test:\n  - ${toTest.map(_.id).mkString("\n  - ")}"); false
+    }
+
+    if (shouldTestEverything) {
+      Command.process("test", s)
+    } else {
+      val modules = modulesToTest.get
+      modules.map(_.id).foldLeft(Command.process(s"; project $currentProjectId; ", s)) {
+        case (state, moduleId) => Command.process(s"; project $moduleId; test", state)
+      }
+    }
   }
 
 }
