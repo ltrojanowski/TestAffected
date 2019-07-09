@@ -13,8 +13,6 @@ final case class Edge[A](from: A, to: A) {
 
 trait DependencyTracker {
 
-//  def edges(): Seq[Edge[ResolvedProject]]
-
   def findAllAffected(p: Set[ResolvedProject]): Set[ResolvedProject]
 
 }
