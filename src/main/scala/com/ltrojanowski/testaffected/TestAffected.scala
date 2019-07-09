@@ -21,9 +21,9 @@ object TestAffected extends AutoPlugin {
 
     val currentBuildUri: URI = extracted.currentRef.build
 
-    val buildStructure:   BuildStructure            = extracted.structure
-    val buildUnitsMap:    Map[URI, LoadedBuildUnit] = buildStructure.units
-    val currentBuildUnit: LoadedBuildUnit           = buildUnitsMap(currentBuildUri)
+    val buildStructure: BuildStructure           = extracted.structure
+    val buildUnitsMap: Map[URI, LoadedBuildUnit] = buildStructure.units
+    val currentBuildUnit: LoadedBuildUnit        = buildUnitsMap(currentBuildUri)
 
     val projectsMap: Map[String, ResolvedProject] = currentBuildUnit.defined
 
@@ -35,13 +35,13 @@ object TestAffected extends AutoPlugin {
 
     val foo = extracted.currentProject.id
 
-    val currentProject = projectsContext
-    val logger = extracted.get(sLog)
-    val workingDir = file(".").getAbsoluteFile
-    val commandRunner = new CommandRunnerImpl(workingDir, logger)
-    val gitClient = new GitClientImpl(logger, commandRunner)
+    val currentProject    = projectsContext
+    val logger            = extracted.get(sLog)
+    val workingDir        = file(".").getAbsoluteFile
+    val commandRunner     = new CommandRunnerImpl(workingDir, logger)
+    val gitClient         = new GitClientImpl(logger, commandRunner)
     val dependencyTracker = new DependencyTrackerImpl(logger)
-    val affectedModules = new AffectedModuleDetectorImpl(logger, gitClient, dependencyTracker)
+    val affectedModules   = new AffectedModuleDetectorImpl(logger, gitClient, dependencyTracker)
 
     logger.info(s"foo: $foo")
     logger.info(s"workingDir: $workingDir")
@@ -52,9 +52,14 @@ object TestAffected extends AutoPlugin {
     val modulesToTest: Option[Set[ResolvedProject]] = affectedModules.findAffectedModules()
     logger.info(s"modules to test: $modulesToTest")
 
-    modulesToTest.map(modules => modules.map(_.id).foldLeft(Command.process(s"; project $foo; ", s)){
-      case (state, moduleId) => Command.process(s"; project $moduleId; test", state)
-    }).getOrElse(Command.process("test", s))
+    modulesToTest
+      .map(
+        modules =>
+          modules.map(_.id).foldLeft(Command.process(s"; project $foo; ", s)) {
+            case (state, moduleId) => Command.process(s"; project $moduleId; test", state)
+          }
+      )
+      .getOrElse(Command.process("test", s))
 
 //    Command.process("; project common; test", s)
 //    (test in Test).map(_ => logger.info("test did run"))

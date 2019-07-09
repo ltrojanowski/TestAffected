@@ -23,17 +23,14 @@ class DependencyTrackerImpl(logger: Logger)(implicit projectsContext: ProjectsCo
 
   lazy val edges: Seq[Edge[ResolvedProject]] = {
     import projectsContext._
-    /*for {
-      from <- projects
-      to <- from.dependencies.flatMap(dep => projectsMap.get(dep.project.project))
-    } yield Edge(from, to)*/
-    projects.flatMap( from =>
-      from.dependencies.flatMap(dep => projectsMap.get(dep.project.project)).map(to => Edge(from, to)))
+    projects.flatMap(
+      from => from.dependencies.flatMap(dep => projectsMap.get(dep.project.project)).map(to => Edge(from, to))
+    )
   }
 
   override def findAllAffected(p: Set[ResolvedProject]): Set[ResolvedProject] = {
     val affected: mutable.Set[ResolvedProject] = mutable.Set.empty
-    val reverted = edges.map(_.reverte)
+    val reverted                               = edges.map(_.reverte)
     logger.info(s"reversed edges: $reverted")
     def addParentProject(p: ResolvedProject): Unit = {
       if (affected.add(p)) {

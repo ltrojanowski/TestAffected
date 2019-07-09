@@ -22,9 +22,9 @@ class AcceptAll extends AffectedModuleDetector {
 }
 
 class AffectedModuleDetectorImpl(
-  logger: Logger,
-  gitClient: GitClient,
-  dependencyTracker: DependencyTracker
+    logger: Logger,
+    gitClient: GitClient,
+    dependencyTracker: DependencyTracker
 )(implicit projectsContext: ProjectsContext) {
 
   def findAffectedModules(): Option[Set[ResolvedProject]] = { // if None either git failed or is not in this repo
@@ -32,9 +32,7 @@ class AffectedModuleDetectorImpl(
     val changedFiles = lastMergeSha.map(sha => gitClient.finedChangedFilesSince(sha, includeUncommitted = true))
 
     logger.info(s"changed files: $changedFiles")
-    val changedModules = changedFiles.map(filePaths =>
-      filePaths.flatMap(filePathToProject).toSet
-    )
+    val changedModules = changedFiles.map(filePaths => filePaths.flatMap(filePathToProject).toSet)
 
     changedModules.map(dependencyTracker.findAllAffected)
   }
@@ -45,20 +43,10 @@ class AffectedModuleDetectorImpl(
     import projectsContext._
 
     val projectPath = projectPaths.filter(filePath.startsWith).toSeq match {
-      case Nil => None
+      case Nil                => None
       case paths: Seq[String] => Some(paths.maxBy(_.length))
     }
 
     projectPath.flatMap(projectsByPath.get)
-
-    /*for {
-      baseProjectPath <- filePath
-        .split("/src")
-        .headOption
-        .fold(projectsByPath.find(pair => filePath.startsWith(pair._1)).map(_._1))(Some(_))
-      //    logger.info(s"baseProjectPath: $baseProjectPath")
-      r <- projectsByPath.get(baseProjectPath)
-    } yield r*/
-
   }
 }

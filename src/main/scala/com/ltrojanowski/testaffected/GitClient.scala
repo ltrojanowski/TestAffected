@@ -36,22 +36,29 @@ class CommandRunnerImpl(workingDir: File, logger: Logger) extends CommandRunner 
       .start()
 
     proc.waitFor(1, TimeUnit.MINUTES)
-    val response = new BufferedReader(new InputStreamReader(proc.getInputStream)).lines().collect(Collectors.toList[String]()).asScala.toList
+    val response = new BufferedReader(new InputStreamReader(proc.getInputStream))
+      .lines()
+      .collect(Collectors.toList[String]())
+      .asScala
+      .toList
     logger.info(s"Response: ${response.mkString(System.lineSeparator())}")
     response
   }
 
 }
 
-class GitClientImpl(private val logger: Logger,
-                    private val commandRunner: CommandRunner) extends GitClient {
+class GitClientImpl(private val logger: Logger, private val commandRunner: CommandRunner) extends GitClient {
 
   import GitClientImpl._
   import commandRunner._
 
   override def finedChangedFilesSince(sha: String, top: String, includeUncommitted: Boolean): List[String] = {
     val pathToGitRepo = PATH_TO_GIT_REPO.runCommand().headOption
-    (if (includeUncommitted) { s"$CHANGED_FILES_CMD_PREFIX $sha" } else { s"$CHANGED_FILES_CMD_PREFIX $top $sha" })
+    (if (includeUncommitted) {
+       s"$CHANGED_FILES_CMD_PREFIX $sha"
+     } else {
+       s"$CHANGED_FILES_CMD_PREFIX $top $sha"
+     })
       .runCommand()
       .flatMap(_.split(File.separator).headOption)
       .flatMap(relativePath => pathToGitRepo.map(_ + File.separator + relativePath))
@@ -69,7 +76,7 @@ class GitClientImpl(private val logger: Logger,
 }
 
 object GitClientImpl {
-  val PATH_TO_GIT_REPO = "git rev-parse --show-toplevel"
-  val PREV_MERGE_CMD = "git log -1 --merges --oneline"
+  val PATH_TO_GIT_REPO         = "git rev-parse --show-toplevel"
+  val PREV_MERGE_CMD           = "git log -1 --merges --oneline"
   val CHANGED_FILES_CMD_PREFIX = "git diff --name-only"
 }
