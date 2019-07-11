@@ -18,7 +18,7 @@ class AffectedModuleDetectorImpl(
     extends AffectedModuleDetector {
 
   def findAffectedModules(): Option[Set[ResolvedProject]] = { // if None either git failed or is not in this repo
-    val lastMergeSha = gitClient.findPreviousMergeCL()
+    val lastMergeSha = gitClient.findBranchingPointFromMaster()
     val changedFiles = lastMergeSha.map(sha => gitClient.finedChangedFilesSince(sha, includeUncommitted = true))
 
     logger.info(s"changed files: $changedFiles")

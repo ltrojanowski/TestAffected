@@ -49,13 +49,14 @@ object TestAffected extends AutoPlugin {
     val modulesToTest: Option[Set[ResolvedProject]] = affectedModules.findAffectedModules()
 
     val shouldTestEverything = modulesToTest match {
-      case None => logger.warn("Failed to obtain git diff. Will test everything."); true
+      case None                           => logger.warn("Failed to obtain git diff. Will test everything."); true
+      case Some(toTest) if toTest.isEmpty => logger.info("No modules require testing."); false
       case Some(toTest) if toTest.contains(currentProject) => {
         logger.info(s"Affected modules contain root module:\n  - ${toTest
           .map(
             p =>
               if (p.id == currentProjectId) {
-                s"p.id <- (root project)"
+                s"${p.id} <- (root project)"
               } else {
                 p.id
               }

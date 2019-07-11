@@ -22,6 +22,8 @@ trait GitClient {
 
   def findPreviousMergeCL(): Option[String]
 
+  def findBranchingPointFromMaster(): Option[String]
+
 }
 
 class CommandRunnerImpl(workingDir: File, logger: Logger) extends CommandRunner {
@@ -73,10 +75,19 @@ class GitClientImpl(private val logger: Logger, private val commandRunner: Comma
       )
   }
 
+  override def findBranchingPointFromMaster(): Option[String] = {
+    for {
+      currentBranch  <- CURRENT_BRANCH_CMD.runCommand().headOption
+      branchingPoint <- s"$BRANCHING_FROM_MASTER_PREFIX $currentBranch".runCommand().headOption
+    } yield branchingPoint
+  }
+
 }
 
 object GitClientImpl {
-  val PATH_TO_GIT_REPO         = "git rev-parse --show-toplevel"
-  val PREV_MERGE_CMD           = "git log -1 --merges --oneline"
-  val CHANGED_FILES_CMD_PREFIX = "git diff --name-only"
+  val PATH_TO_GIT_REPO             = "git rev-parse --show-toplevel"
+  val PREV_MERGE_CMD               = "git log -1 --merges --oneline"
+  val CURRENT_BRANCH_CMD           = "git rev-parse --abbrev-ref HEAD"
+  val BRANCHING_FROM_MASTER_PREFIX = s"git merge-base master"
+  val CHANGED_FILES_CMD_PREFIX     = "git diff --name-only"
 }
