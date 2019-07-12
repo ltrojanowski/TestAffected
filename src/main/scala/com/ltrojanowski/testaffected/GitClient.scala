@@ -34,8 +34,6 @@ class CommandRunnerImpl(workingDir: File, logger: Logger) extends CommandRunner 
     logger.info(s"running command $command")
     val proc = new ProcessBuilder(parts: _*)
       .directory(workingDir)
-      .redirectOutput(ProcessBuilder.Redirect.PIPE)
-      .redirectError(ProcessBuilder.Redirect.PIPE)
       .start()
 
     proc.waitFor(1, TimeUnit.MINUTES)
