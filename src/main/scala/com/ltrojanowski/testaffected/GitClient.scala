@@ -3,6 +3,7 @@ package com.ltrojanowski.testaffected
 import java.io.{BufferedReader, File, InputStreamReader}
 import java.util.concurrent.TimeUnit
 import java.util.stream.Collectors
+import sys.process._
 
 import sbt.util.Logger
 
@@ -30,18 +31,8 @@ trait GitClient {
 class CommandRunnerImpl(workingDir: File, logger: Logger) extends CommandRunner {
 
   override def execute(command: String): List[String] = {
-    val parts = command.split("\\s")
     logger.info(s"running command $command")
-    val proc = new ProcessBuilder(parts: _*)
-      .directory(workingDir)
-      .start()
-
-    proc.waitFor(1, TimeUnit.MINUTES)
-    val response = new BufferedReader(new InputStreamReader(proc.getInputStream))
-      .lines()
-      .collect(Collectors.toList[String]())
-      .asScala
-      .toList
+    val response = Process(command).lineStream.toList
     logger.info(s"Response: ${response.mkString(System.lineSeparator())}")
     response
   }
