@@ -71,11 +71,11 @@ object TestAffected extends AutoPlugin {
     }
 
     if (shouldTestEverything) {
-      Command.process("test", s)
+      MainLoop.processCommand(Exec("test", None), s)
     } else {
       val modules = modulesToTest.get
-      modules.map(_.id).foldLeft(Command.process(s"; project $currentProjectId; ", s)) {
-        case (state, moduleId) => Command.process(s"; project $moduleId; test", state)
+      modules.map(_.id).foldLeft(MainLoop.processCommand(Exec(s"; project $currentProjectId; ", None), s)) {
+        case (state, moduleId) => MainLoop.processCommand(Exec(s"; project $moduleId; test", None), state)
       }
     }
   }
