@@ -18,12 +18,13 @@ trait CommandRunner {
 
 trait GitClient {
 
-  def finedChangedFilesSince(sha: String, top: String = "HEAD", includeUncommitted: Boolean = false): List[String]
+  def finedChangedFilesSince(sha: String, top: String, includeUncommitted: Boolean = false): List[String]
 
   def findPreviousMergeCL(): Option[String]
 
-  def findBranchingPointFromMaster(): Option[String]
+  def findBranchingPointFromMaster(branchToCompare: Option[String] = None): Option[String]
 
+  def findHeadOfBranch(branchToCompare: Option[String]): Option[String]
 }
 
 class CommandRunnerImpl(workingDir: File, logger: Logger) extends CommandRunner {
@@ -75,11 +76,23 @@ class GitClientImpl(private val logger: Logger, private val commandRunner: Comma
       )
   }
 
-  override def findBranchingPointFromMaster(): Option[String] = {
+  override def findBranchingPointFromMaster(branchToCompare: Option[String] = None): Option[String] = {
     for {
-      currentBranch  <- CURRENT_BRANCH_CMD.runCommand().headOption
-      branchingPoint <- s"$BRANCHING_FROM_MASTER_PREFIX $currentBranch".runCommand().headOption
+      comparedBranch <- branchToCompare match {
+        case None            => CURRENT_BRANCH_CMD.runCommand().headOption
+        case b: Some[String] => identity(b)
+      }
+      branchingPoint <- s"$BRANCHING_FROM_MASTER_PREFIX $comparedBranch".runCommand().headOption
     } yield branchingPoint
+  }
+
+  override def findHeadOfBranch(branchToCompare: Option[String]): Option[String] = {
+    s"$HEAD_OF_BRANCH_PREFIX ${branchToCompare.getOrElse("HEAD")}"
+      .runCommand()
+      .headOption
+      .flatMap(
+        _.split(" ").headOption
+      )
   }
 
 }
@@ -90,4 +103,5 @@ object GitClientImpl {
   val CURRENT_BRANCH_CMD           = "git rev-parse --abbrev-ref HEAD"
   val BRANCHING_FROM_MASTER_PREFIX = s"git merge-base master"
   val CHANGED_FILES_CMD_PREFIX     = "git diff --name-only"
+  val HEAD_OF_BRANCH_PREFIX        = "git log -1 --oneline"
 }
