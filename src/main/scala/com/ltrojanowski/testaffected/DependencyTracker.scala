@@ -29,7 +29,6 @@ class DependencyTrackerImpl(logger: Logger)(implicit projectsContext: ProjectsCo
   override def findAllAffected(p: Set[ResolvedProject]): Set[ResolvedProject] = {
     val affected: mutable.Set[ResolvedProject] = mutable.Set.empty
     val reverted                               = edges.map(_.reverte)
-    logger.info(s"reversed edges: $reverted")
     def addParentProject(p: ResolvedProject): Unit = {
       if (affected.add(p)) {
         reverted.filter(_.from.equals(p)).map(_.to).foreach(addParentProject)

@@ -49,10 +49,11 @@ class GitClientImpl(private val logger: Logger, private val commandRunner: Comma
 
   override def finedChangedFilesSince(sha: String, top: String, includeUncommitted: Boolean): List[String] = {
     val pathToGitRepo = PATH_TO_GIT_REPO.runCommand().headOption
+    val excludeSuffix = TestAffected.ignoredFilesOrDirs.value.map(path => s"'(exclude)$path'").mkString(" ")
     val changedFiles = (if (includeUncommitted) {
-                          s"$CHANGED_FILES_CMD_PREFIX $sha"
+                          s"$CHANGED_FILES_CMD_PREFIX $sha $excludeSuffix"
                         } else {
-                          s"$CHANGED_FILES_CMD_PREFIX $top $sha"
+                          s"$CHANGED_FILES_CMD_PREFIX $top $sha $excludeSuffix"
                         })
       .runCommand()
       .flatMap(_.split(File.separator).headOption)

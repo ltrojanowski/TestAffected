@@ -4,7 +4,7 @@ import sbt.Keys._
 import sbt.internal.{BuildStructure, LoadedBuildUnit}
 import sbt.{Def, _}
 
-object TestAffected extends AutoPlugin {
+object TestAffected extends AutoPlugin with Settings {
 
   override def trigger = allRequirements
 
@@ -14,7 +14,14 @@ object TestAffected extends AutoPlugin {
     )
   )
 
-  val testAffectedCommand = Command.args("testAffected", "foo")(testAffected)
+  override def projectSettings: Seq[Def.Setting[_]] = Seq(
+    ignoredFilesOrDirs in Global := Seq()
+  )
+
+  val testAffectedCommand = Command.args(
+    "testAffected",
+    "Tests all modules affected by your changes. The changes are resolved using a git diff."
+  )(testAffected)
 
   private def extractArgs(args: Seq[String]): (Option[String], Option[String]) = {
     args match {

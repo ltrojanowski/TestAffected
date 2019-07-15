@@ -26,7 +26,6 @@ class AffectedModuleDetectorImpl(
       headOfBranchSha <- gitClient.findHeadOfBranch(branchToCompare)
     } yield gitClient.finedChangedFilesSince(lastMergeSha, top = headOfBranchSha)
 
-    logger.info(s"changed files: $changedFiles")
     val changedModules = changedFiles.map(filePaths => filePaths.flatMap(filePathToProject).toSet)
 
     changedModules.map(dependencyTracker.findAllAffected)
