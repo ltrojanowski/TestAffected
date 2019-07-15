@@ -4,7 +4,9 @@ import sbt.Keys._
 import sbt.internal.{BuildStructure, LoadedBuildUnit}
 import sbt.{Def, _}
 
-object TestAffected extends AutoPlugin with Settings {
+object TestAffected extends AutoPlugin {
+  object autoImport extends SettingsKeys
+  import autoImport._
 
   override def trigger = allRequirements
 
@@ -57,7 +59,7 @@ object TestAffected extends AutoPlugin with Settings {
     val logger            = extracted.get(sLog)
     val workingDir        = file(".").getAbsoluteFile
     val commandRunner     = new CommandRunnerImpl(workingDir, logger)
-    val gitClient         = new GitClientImpl(logger, commandRunner)
+    val gitClient         = new GitClientImpl(logger, commandRunner, s.get(ignoredFilesOrDirs.key).getOrElse(Seq()))
     val dependencyTracker = new DependencyTrackerImpl(logger)
     val affectedModules   = new AffectedModuleDetectorImpl(logger, gitClient, dependencyTracker)
 

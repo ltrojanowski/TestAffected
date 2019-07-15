@@ -42,14 +42,18 @@ class CommandRunnerImpl(workingDir: File, logger: Logger) extends CommandRunner 
 
 }
 
-class GitClientImpl(private val logger: Logger, private val commandRunner: CommandRunner) extends GitClient {
+class GitClientImpl(
+    private val logger: Logger,
+    private val commandRunner: CommandRunner,
+    private val ignoredFilesOrDirs: Seq[String]
+) extends GitClient {
 
   import GitClientImpl._
   import commandRunner._
 
   override def finedChangedFilesSince(sha: String, top: String, includeUncommitted: Boolean): List[String] = {
     val pathToGitRepo = PATH_TO_GIT_REPO.runCommand().headOption
-    val excludeSuffix = TestAffected.ignoredFilesOrDirs.value.map(path => s"'(exclude)$path'").mkString(" ")
+    val excludeSuffix = ignoredFilesOrDirs.map(path => s"'(exclude)$path'").mkString(" ")
     val changedFiles = (if (includeUncommitted) {
                           s"$CHANGED_FILES_CMD_PREFIX $sha $excludeSuffix"
                         } else {
