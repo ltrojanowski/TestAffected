@@ -6,7 +6,7 @@ import scala.collection.immutable.Seq
 
 abstract class AffectedModuleDetector {
 
-  def findAffectedModules(branchToCompare: Option[String]): Option[Set[ResolvedProject]]
+  def findAffectedModules(branchToCompare: Option[String], targetBranch: Option[String]): Option[Set[ResolvedProject]]
 
 }
 
@@ -17,9 +17,12 @@ class AffectedModuleDetectorImpl(
 )(implicit projectsContext: ProjectsContext)
     extends AffectedModuleDetector {
 
-  def findAffectedModules(branchToCompare: Option[String]): Option[Set[ResolvedProject]] = { // if None either git failed or is not in this repo
+  def findAffectedModules(
+      branchToCompare: Option[String],
+      targetBranch: Option[String] = None
+  ): Option[Set[ResolvedProject]] = { // if None either git failed or is not in this repo
     val changedFiles = for {
-      lastMergeSha    <- gitClient.findBranchingPointFromMaster(branchToCompare)
+      lastMergeSha    <- gitClient.findBranchingPointFromMaster(branchToCompare, targetBranch)
       headOfBranchSha <- gitClient.findHeadOfBranch(branchToCompare)
     } yield gitClient.finedChangedFilesSince(lastMergeSha, top = headOfBranchSha)
 

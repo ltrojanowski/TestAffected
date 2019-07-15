@@ -16,9 +16,17 @@ object TestAffected extends AutoPlugin {
 
   val testAffectedCommand = Command.args("testAffected", "foo")(testAffected)
 
+  private def extractArgs(args: Seq[String]): (Option[String], Option[String]) = {
+    args match {
+      case branchToCompare :: targetBranch :: Nil => (Some(branchToCompare), Some(targetBranch))
+      case branchToCompare :: Nil                 => (Some(branchToCompare), None)
+      case Nil                                    => (None, None)
+    }
+  }
+
   private[this] def testAffected(s: State, args: Seq[String]): State = {
 
-    val branchToCompare: Option[String] = args.headOption
+    val (branchToCompare, targetBranch) = extractArgs(args)
 
     implicit val extracted: Extracted = Project extract s
 
@@ -49,7 +57,7 @@ object TestAffected extends AutoPlugin {
     logger.info(s"workingDir: $workingDir")
     logger.info(s"projectsByPath: $projectsByPath")
 
-    val modulesToTest: Option[Set[ResolvedProject]] = affectedModules.findAffectedModules(branchToCompare)
+    val modulesToTest: Option[Set[ResolvedProject]] = affectedModules.findAffectedModules(branchToCompare, targetBranch)
 
     val shouldTestEverything = modulesToTest match {
       case None                           => logger.warn("Failed to obtain git diff. Will test everything."); true

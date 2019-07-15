@@ -23,7 +23,10 @@ trait GitClient {
 
   def findPreviousMergeCL(): Option[String]
 
-  def findBranchingPointFromMaster(branchToCompare: Option[String] = None): Option[String]
+  def findBranchingPointFromMaster(
+      branchToCompare: Option[String] = None,
+      targetBranch: Option[String]    = None
+  ): Option[String]
 
   def findHeadOfBranch(branchToCompare: Option[String]): Option[String]
 }
@@ -65,13 +68,18 @@ class GitClientImpl(private val logger: Logger, private val commandRunner: Comma
       )
   }
 
-  override def findBranchingPointFromMaster(branchToCompare: Option[String] = None): Option[String] = {
+  override def findBranchingPointFromMaster(
+      branchToCompare: Option[String] = None,
+      targetBranch: Option[String]    = None
+  ): Option[String] = {
     for {
       comparedBranch <- branchToCompare match {
         case None            => CURRENT_BRANCH_CMD.runCommand().headOption
         case b: Some[String] => identity(b)
       }
-      branchingPoint <- s"$BRANCHING_FROM_MASTER_PREFIX $comparedBranch".runCommand().headOption
+      branchingPoint <- s"$BRANCHING_FROM_TARGET_PREFIX ${targetBranch.getOrElse("master")} $comparedBranch"
+        .runCommand()
+        .headOption
     } yield branchingPoint
   }
 
@@ -90,7 +98,7 @@ object GitClientImpl {
   val PATH_TO_GIT_REPO             = "git rev-parse --show-toplevel"
   val PREV_MERGE_CMD               = "git log -1 --merges --oneline"
   val CURRENT_BRANCH_CMD           = "git rev-parse --abbrev-ref HEAD"
-  val BRANCHING_FROM_MASTER_PREFIX = s"git merge-base master"
+  val BRANCHING_FROM_TARGET_PREFIX = s"git merge-base"
   val CHANGED_FILES_CMD_PREFIX     = "git diff --name-only"
   val HEAD_OF_BRANCH_PREFIX        = "git log -1 --oneline"
 }
