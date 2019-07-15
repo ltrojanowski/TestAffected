@@ -49,14 +49,16 @@ class GitClientImpl(private val logger: Logger, private val commandRunner: Comma
 
   override def finedChangedFilesSince(sha: String, top: String, includeUncommitted: Boolean): List[String] = {
     val pathToGitRepo = PATH_TO_GIT_REPO.runCommand().headOption
-    (if (includeUncommitted) {
-       s"$CHANGED_FILES_CMD_PREFIX $sha"
-     } else {
-       s"$CHANGED_FILES_CMD_PREFIX $top $sha"
-     })
+    val changedFiles = (if (includeUncommitted) {
+                          s"$CHANGED_FILES_CMD_PREFIX $sha"
+                        } else {
+                          s"$CHANGED_FILES_CMD_PREFIX $top $sha"
+                        })
       .runCommand()
       .flatMap(_.split(File.separator).headOption)
       .flatMap(relativePath => pathToGitRepo.map(_ + File.separator + relativePath))
+    logger.info(s"Git diff found the following files changed:\n${changedFiles.mkString(" - ", "\n - ", "")}")
+    changedFiles
   }
 
   override def findPreviousMergeCL(): Option[String] = {

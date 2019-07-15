@@ -54,9 +54,6 @@ object TestAffected extends AutoPlugin {
     val dependencyTracker = new DependencyTrackerImpl(logger)
     val affectedModules   = new AffectedModuleDetectorImpl(logger, gitClient, dependencyTracker)
 
-    logger.info(s"workingDir: $workingDir")
-    logger.info(s"projectsByPath: $projectsByPath")
-
     val modulesToTest: Option[Set[ResolvedProject]] = affectedModules.findAffectedModules(branchToCompare, targetBranch)
 
     val shouldTestEverything = modulesToTest match {
