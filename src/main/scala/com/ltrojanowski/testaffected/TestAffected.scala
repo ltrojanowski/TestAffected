@@ -56,10 +56,11 @@ object TestAffected extends AutoPlugin {
     val currentProject   = extracted.currentProject
     val currentProjectId = currentProject.id
 
-    val logger            = extracted.get(sLog)
-    val workingDir        = file(".").getAbsoluteFile
-    val commandRunner     = new CommandRunnerImpl(workingDir, logger)
-    val gitClient         = new GitClientImpl(logger, commandRunner, s.get(ignoredFilesOrDirs.key).getOrElse(Seq()))
+    val logger        = extracted.get(sLog)
+    val workingDir    = file(".").getAbsoluteFile
+    val commandRunner = new CommandRunnerImpl(workingDir, logger)
+    val gitClient =
+      new GitClientImpl(logger, commandRunner, extracted.get(ignoredFilesOrDirs))
     val dependencyTracker = new DependencyTrackerImpl(logger)
     val affectedModules   = new AffectedModuleDetectorImpl(logger, gitClient, dependencyTracker)
 
