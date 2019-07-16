@@ -53,7 +53,10 @@ class GitClientImpl(
 
   override def finedChangedFilesSince(sha: String, top: String, includeUncommitted: Boolean): List[String] = {
     val pathToGitRepo = PATH_TO_GIT_REPO.runCommand().headOption
-    val excludeSuffix = ignoredFilesOrDirs.map(path => s"'(exclude)$path'").mkString(" ")
+    val excludeSuffix = ignoredFilesOrDirs
+      .flatMap(ignoredFileOrDir => pathToGitRepo.map(path => s"'(exclude)$path$ignoredFileOrDir'"))
+      .mkString(" ")
+    logger.info(s"Git diff will exclude the following files:\n${excludeSuffix.mkString(" - ", "\n - ", "")}")
     val changedFiles = (if (includeUncommitted) {
                           s"$CHANGED_FILES_CMD_PREFIX $sha $excludeSuffix"
                         } else {
