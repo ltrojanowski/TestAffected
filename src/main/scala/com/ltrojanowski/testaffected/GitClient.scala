@@ -63,10 +63,9 @@ class GitClientImpl(
                           s"$CHANGED_FILES_CMD_PREFIX $top $sha $excludeSuffix"
                         })
       .runCommand()
-      .flatMap(_.split(File.separator).headOption)
-      .flatMap(relativePath => pathToGitRepo.map(_ + File.separator + relativePath))
     logger.info(s"Git diff found the following files changed:\n${changedFiles.mkString(" - ", "\n - ", "")}")
     changedFiles
+      .flatMap(relativePath => pathToGitRepo.map(_ + File.separator + relativePath))
   }
 
   override def findPreviousMergeCL(): Option[String] = {
