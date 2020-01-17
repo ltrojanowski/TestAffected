@@ -19,7 +19,7 @@ trait CommandRunner {
 
 trait GitClient {
 
-  def finedChangedFilesSince(sha: String, top: String, includeUncommitted: Boolean = false): List[String]
+  def findChangedFilesSince(sha: String, top: String, includeUncommitted: Boolean = false): List[String]
 
   def findPreviousMergeCL(): Option[String]
 
@@ -51,7 +51,7 @@ class GitClientImpl(
   import GitClientImpl._
   import commandRunner._
 
-  override def finedChangedFilesSince(sha: String, top: String, includeUncommitted: Boolean): List[String] = {
+  override def findChangedFilesSince(sha: String, top: String, includeUncommitted: Boolean): List[String] = {
     val pathToGitRepo = PATH_TO_GIT_REPO.runCommand().headOption
     val excludeSuffix = ignoredFilesOrDirs
       .flatMap(ignoredFileOrDir => pathToGitRepo.map(path => s"':(exclude)$path$ignoredFileOrDir'"))

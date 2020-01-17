@@ -33,11 +33,11 @@ object TestAffected extends AutoPlugin {
     }
   }
 
-  private[this] def testAffected(s: State, args: Seq[String]): State = {
-
-    val (branchToCompare, targetBranch) = extractArgs(args)
-
-    implicit val extracted: Extracted = Project extract s
+  private def affectedProjectReferences(
+      extracted: Extracted,
+      branchToCompare: Option[String],
+      targetBranch: Option[String]
+  ): Option[Set[ResolvedProject]] = {
 
     val currentBuildUri: URI = extracted.currentRef.build
 
@@ -53,9 +53,6 @@ object TestAffected extends AutoPlugin {
 
     implicit val projectsContext: ProjectsContext = ProjectsContext(projects, projectsMap, projectsByPath)
 
-    val currentProject   = extracted.currentProject
-    val currentProjectId = currentProject.id
-
     val logger        = extracted.get(sLog)
     val workingDir    = file(".").getAbsoluteFile
     val commandRunner = new CommandRunnerImpl(workingDir, logger)
@@ -64,7 +61,19 @@ object TestAffected extends AutoPlugin {
     val dependencyTracker = new DependencyTrackerImpl(logger)
     val affectedModules   = new AffectedModuleDetectorImpl(logger, gitClient, dependencyTracker)
 
-    val modulesToTest: Option[Set[ResolvedProject]] = affectedModules.findAffectedModules(branchToCompare, targetBranch)
+    affectedModules.findAffectedModules(branchToCompare, targetBranch)
+  }
+
+  private[this] def testAffected(s: State, args: Seq[String]): State = {
+
+    val (branchToCompare, targetBranch) = extractArgs(args)
+
+    val extracted: Extracted = Project extract s
+    val logger               = extracted.get(sLog)
+    val modulesToTest: Option[Set[ResolvedProject]] =
+      affectedProjectReferences(extracted, branchToCompare, targetBranch)
+    val currentProject   = extracted.currentProject
+    val currentProjectId = currentProject.id
 
     val shouldTestEverything = modulesToTest match {
       case None                           => logger.warn("Failed to obtain git diff. Will test everything."); true
@@ -93,6 +102,38 @@ object TestAffected extends AutoPlugin {
         case (state, moduleId) => MainLoop.processCommand(Exec(s"; project $moduleId; test", None), state)
       }
     }
+  }
+
+  private def extractHashesAndCommand(args: Seq[String]): Either[Throwable, (String, String, Seq[String])] = {
+    args match {
+      case _ :: _ :: "execute" :: Nil => Left(new Throwable("missing command to run in affected projects"))
+      case branchToCompare :: targetBranch :: "execute" :: tail => Right((branchToCompare, targetBranch, tail))
+      case _                                       => Left(new Throwable("missing hashes of branches to merge into and working branch"))
+    }
+  }
+
+  private[this] def executeInProjectsAffectedByDiff(s: State, args: Seq[String]): State = {
+    // inProjectsAffectedByDiff kiuhkjh2354 6lj34ht89 execute [rest of command]
+    val extracted: Extracted = Project extract s
+    val logger               = extracted.get(sLog)
+
+    val currentProject   = extracted.currentProject
+    val currentProjectId = currentProject.id
+
+    val modulesToTest = for {
+      extractedHashesAndCommand <- extractHashesAndCommand(args)
+      (branchToCompare, targetBranch, command) = extractedHashesAndCommand
+      modulesToTest <- affectedProjectReferences(extracted, Some(branchToCompare), Some(targetBranch))
+        .toRight[Throwable](new Throwable("Failed to fetch affected projects"))
+    } yield modulesToTest
+
+    modulesToTest match {
+      case Right(projectsToTest) => projectsToTest.map(_.id).foldLeft(MainLoop.processCommand(Exec(s"; project $currentProjectId; ", None), s)) {
+        case (state, moduleId) => MainLoop.processCommand(Exec(s"; project $moduleId; test", None), state)
+      }
+    }
+
+    ???
   }
 
 }
