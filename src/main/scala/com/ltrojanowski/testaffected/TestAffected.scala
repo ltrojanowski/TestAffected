@@ -12,7 +12,8 @@ object TestAffected extends AutoPlugin {
 
   override def buildSettings: Seq[Def.Setting[_]] = Seq(
     commands ++= Seq(
-      testAffectedCommand
+      testAffectedCommand,
+      inDiffAffectedExecuteCommand
     )
   )
 
@@ -24,6 +25,11 @@ object TestAffected extends AutoPlugin {
     "testAffected",
     "Tests all modules affected by your changes. The changes are resolved using a git diff."
   )(testAffected)
+
+  val inDiffAffectedExecuteCommand = Command.args(
+    "inDiffAffectedExecute",
+    "Executes a command in all modules affected by "
+  )(inDiffAffectedExecute)
 
   private def extractArgs(args: Seq[String]): (Option[String], Option[String]) = {
     args match {
@@ -112,8 +118,8 @@ object TestAffected extends AutoPlugin {
     }
   }
 
-  private[this] def executeInProjectsAffectedByDiff(s: State, args: Seq[String]): State = {
-    // inProjectsAffectedByDiff kiuhkjh2354 6lj34ht89 execute [rest of command]
+  private[this] def inDiffAffectedExecute(s: State, args: Seq[String]): State = {
+    // inDiffAffected kiuhkjh2354 6lj34ht89 execute [rest of command]
     val extracted: Extracted = Project extract s
     val logger               = extracted.get(sLog)
 
