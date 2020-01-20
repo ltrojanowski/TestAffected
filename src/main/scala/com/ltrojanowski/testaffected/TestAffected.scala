@@ -27,7 +27,7 @@ object TestAffected extends AutoPlugin {
   )(testAffected)
 
   val inDiffAffectedExecuteCommand = Command.args(
-    "inDiffAffectedExecute",
+    "inDiffAffected",
     "Executes a command in all modules affected by "
   )(inDiffAffectedExecute)
 
