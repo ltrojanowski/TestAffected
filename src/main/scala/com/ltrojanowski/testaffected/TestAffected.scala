@@ -125,15 +125,20 @@ object TestAffected extends AutoPlugin {
       (branchToCompare, targetBranch, command) = extractedHashesAndCommand
       modulesToTest <- affectedProjectReferences(extracted, Some(branchToCompare), Some(targetBranch))
         .toRight[Throwable](new Throwable("Failed to fetch affected projects"))
-    } yield modulesToTest
+    } yield (modulesToTest, command.mkString(" "))
 
     modulesToTest match {
-      case Right(projectsToTest) => projectsToTest.map(_.id).foldLeft(MainLoop.processCommand(Exec(s"; project $currentProjectId; ", None), s)) {
-        case (state, moduleId) => MainLoop.processCommand(Exec(s"; project $moduleId; test", None), state)
+      case Right((projectsToTest, commandToRun)) =>
+        projectsToTest
+          .map(_.id)
+          .foldLeft(MainLoop.processCommand(Exec(s"; project $currentProjectId; ", None), s)) {
+        case (state, moduleId) => MainLoop.processCommand(Exec(s"; project $moduleId; $commandToRun", None), state)
+      }
+      case Left(e) => {
+        logger.error(e.getMessage)
+        s
       }
     }
-
-    ???
   }
 
 }
