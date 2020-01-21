@@ -35,7 +35,7 @@ class CommandRunnerImpl(workingDir: File, logger: Logger) extends CommandRunner 
 
   override def execute(command: String): List[String] = {
     logger.info(s"running command $command")
-    val response = Process(command).lineStream.toList
+    val response = Process(command.split(" ").toList).lineStream.toList
     logger.info(s"Response: ${response.mkString(System.lineSeparator())}")
     response
   }
@@ -54,7 +54,7 @@ class GitClientImpl(
   override def findChangedFilesSince(sha: String, top: String, includeUncommitted: Boolean): List[String] = {
     val pathToGitRepo = PATH_TO_GIT_REPO.runCommand().headOption
     val excludeSuffix = ignoredFilesOrDirs
-      .flatMap(ignoredFileOrDir => pathToGitRepo.map(path => s"':(exclude)$path$ignoredFileOrDir'"))
+      .flatMap(ignoredFileOrDir => pathToGitRepo.map(path => s":(exclude)$path$ignoredFileOrDir"))
       .mkString(" ")
     logger.info(s"Git diff will exclude the following files:\n${ignoredFilesOrDirs.mkString(" - ", "\n - ", "")}")
     val changedFiles = (if (includeUncommitted) {
@@ -63,10 +63,9 @@ class GitClientImpl(
                           s"$CHANGED_FILES_CMD_PREFIX $top $sha $excludeSuffix"
                         })
       .runCommand()
-      .flatMap(_.split(File.separator).headOption)
-      .flatMap(relativePath => pathToGitRepo.map(_ + File.separator + relativePath))
     logger.info(s"Git diff found the following files changed:\n${changedFiles.mkString(" - ", "\n - ", "")}")
     changedFiles
+      .flatMap(relativePath => pathToGitRepo.map(_ + File.separator + relativePath))
   }
 
   override def findPreviousMergeCL(): Option[String] = {
