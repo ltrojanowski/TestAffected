@@ -153,4 +153,15 @@ object TestAffected extends AutoPlugin {
     }
   }
 
+
+  val diffAffectedProjects = Def.task[Set[ResolvedProject]] {
+    val s =  state.value
+    val extracted: Extracted = Project extract s
+    val logger               = extracted.get(sLog)
+
+    val currentProject   = extracted.currentProject
+    val currentProjectId = currentProject.id
+    ???
+  }
+
 }
