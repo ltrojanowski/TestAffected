@@ -110,11 +110,17 @@ object TestAffected extends AutoPlugin {
     }
   }
 
-  private def extractHashesAndCommand(args: Seq[String]): Either[Throwable, (String, String, Seq[String])] = {
+  private def extractHashesAndCommand(
+      args: Seq[String]
+  ): Either[Throwable, (Option[String], Option[String], Seq[String])] = {
     args match {
-      case _ :: _ :: "execute" :: Nil => Left(new Throwable("missing command to run in affected projects"))
-      case branchToCompare :: targetBranch :: "execute" :: tail => Right((branchToCompare, targetBranch, tail))
-      case _                                       => Left(new Throwable("missing hashes of branches to merge into and working branch"))
+      case _ :: _ :: "execute" :: Nil | _ :: "execute" :: Nil | "execute" :: Nil =>
+        Left(new Throwable("missing command to run in affected projects"))
+      case branchToCompare :: "execute" :: tail => Right((Some(branchToCompare), None, tail))
+      case "execute" :: tail                    => Right(None, None, tail)
+      case branchToCompare :: targetBranch :: "execute" :: tail =>
+        Right((Some(branchToCompare), Some(targetBranch), tail))
+      case _ => Left(new Throwable("missing hashes of branches to merge into and working branch"))
     }
   }
 
@@ -127,9 +133,9 @@ object TestAffected extends AutoPlugin {
     val currentProjectId = currentProject.id
 
     val modulesToTest = for {
-      extractedHashesAndCommand <- extractHashesAndCommand(args)
-      (branchToCompare, targetBranch, command) = extractedHashesAndCommand
-      modulesToTest <- affectedProjectReferences(extracted, Some(branchToCompare), Some(targetBranch))
+      extractedBranchesAndCommand              <- extractHashesAndCommand(args)
+      (branchToCompare, targetBranch, command) = extractedBranchesAndCommand
+      modulesToTest <- affectedProjectReferences(extracted, branchToCompare, targetBranch)
         .toRight[Throwable](new Throwable("Failed to fetch affected projects"))
     } yield (modulesToTest, command.mkString(" "))
 
@@ -138,8 +144,8 @@ object TestAffected extends AutoPlugin {
         projectsToTest
           .map(_.id)
           .foldLeft(MainLoop.processCommand(Exec(s"; project $currentProjectId; ", None), s)) {
-        case (state, moduleId) => MainLoop.processCommand(Exec(s"; project $moduleId; $commandToRun", None), state)
-      }
+            case (state, moduleId) => MainLoop.processCommand(Exec(s"; project $moduleId; $commandToRun", None), state)
+          }
       case Left(e) => {
         logger.error(e.getMessage)
         s
