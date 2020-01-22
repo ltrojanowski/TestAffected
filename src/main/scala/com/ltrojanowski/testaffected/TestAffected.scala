@@ -14,9 +14,9 @@ object TestAffected extends AutoPlugin with ArgsExtractors {
   override def buildSettings: Seq[Def.Setting[_]] = Seq(
     commands ++= Seq(
       testAffectedCommand,
-      inDiffAffectedExecuteCommand,
-      diffAffectedProjects
-    )
+      inDiffAffectedExecuteCommand
+    ),
+    diffAffectedProjects := diffAffectedProjectsTask.inputTaskValue
   )
 
   override def projectSettings: Seq[Def.Setting[_]] = Seq(
@@ -138,7 +138,7 @@ object TestAffected extends AutoPlugin with ArgsExtractors {
     }
   }
 
-  val diffAffectedProjects = Def.inputTask[Set[ResolvedProject]] {
+  val diffAffectedProjectsTask = Def.inputTask[Set[ResolvedProject]] {
     val args: Seq[String]    = spaceDelimited("<arg>").parsed
     val s                    = state.value
     val extracted: Extracted = Project extract s
