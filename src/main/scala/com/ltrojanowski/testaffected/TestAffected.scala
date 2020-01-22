@@ -3,8 +3,9 @@ package com.ltrojanowski.testaffected
 import sbt.Keys._
 import sbt.internal.{BuildStructure, LoadedBuildUnit}
 import sbt.{Def, _}
+import complete.DefaultParsers._
 
-object TestAffected extends AutoPlugin {
+object TestAffected extends AutoPlugin with ArgsExtractors {
   object autoImport extends SettingsKeys
   import autoImport._
 
@@ -13,7 +14,8 @@ object TestAffected extends AutoPlugin {
   override def buildSettings: Seq[Def.Setting[_]] = Seq(
     commands ++= Seq(
       testAffectedCommand,
-      inDiffAffectedExecuteCommand
+      inDiffAffectedExecuteCommand,
+      diffAffectedProjects
     )
   )
 
@@ -30,14 +32,6 @@ object TestAffected extends AutoPlugin {
     "inDiffAffected",
     "Executes a command in all modules affected by "
   )(inDiffAffectedExecute)
-
-  private def extractArgs(args: Seq[String]): (Option[String], Option[String]) = {
-    args match {
-      case branchToCompare :: targetBranch :: Nil => (Some(branchToCompare), Some(targetBranch))
-      case branchToCompare :: Nil                 => (Some(branchToCompare), None)
-      case Nil                                    => (None, None)
-    }
-  }
 
   private def affectedProjectReferences(
       extracted: Extracted,
@@ -72,19 +66,23 @@ object TestAffected extends AutoPlugin {
 
   private[this] def testAffected(s: State, args: Seq[String]): State = {
 
-    val (branchToCompare, targetBranch) = extractArgs(args)
+    val extractedBranches = extractBranches(args)
 
     val extracted: Extracted = Project extract s
     val logger               = extracted.get(sLog)
-    val modulesToTest: Option[Set[ResolvedProject]] =
-      affectedProjectReferences(extracted, branchToCompare, targetBranch)
+    val modulesToTest: Either[Throwable, Set[ResolvedProject]] = for {
+      extractedBranches               <- extractBranches(args)
+      (branchToCompare, targetBranch) = extractedBranches
+      affectedProjects <- affectedProjectReferences(extracted, branchToCompare, targetBranch)
+        .toRight[Throwable](new Throwable("Failed to fetch affected projects"))
+    } yield affectedProjects
     val currentProject   = extracted.currentProject
     val currentProjectId = currentProject.id
 
     val shouldTestEverything = modulesToTest match {
-      case None                           => logger.warn("Failed to obtain git diff. Will test everything."); true
-      case Some(toTest) if toTest.isEmpty => logger.info("No modules require testing."); false
-      case Some(toTest) if toTest.contains(currentProject) => {
+      case Left(_)                         => logger.warn("Failed to obtain git diff. Will test everything."); true
+      case Right(toTest) if toTest.isEmpty => logger.info("No modules require testing."); false
+      case Right(toTest) if toTest.contains(currentProject) => {
         logger.info(s"Affected modules contain root module:\n  - ${toTest
           .map(
             p =>
@@ -97,30 +95,17 @@ object TestAffected extends AutoPlugin {
           .mkString("\n  - ")}\n\n Will test everything.")
         true
       }
-      case Some(toTest) => logger.info(s"Modules to test:\n  - ${toTest.map(_.id).mkString("\n  - ")}"); false
+      case Right(toTest) => logger.info(s"Modules to test:\n  - ${toTest.map(_.id).mkString("\n  - ")}"); false
     }
 
     if (shouldTestEverything) {
       MainLoop.processCommand(Exec("test", None), s)
     } else {
-      val modules = modulesToTest.get
+      val modules =
+        modulesToTest.getOrElse(throw new IllegalStateException("Reached unreachable state. You are on your own now"))
       modules.map(_.id).foldLeft(MainLoop.processCommand(Exec(s"; project $currentProjectId; ", None), s)) {
         case (state, moduleId) => MainLoop.processCommand(Exec(s"; project $moduleId; test", None), state)
       }
-    }
-  }
-
-  private def extractHashesAndCommand(
-      args: Seq[String]
-  ): Either[Throwable, (Option[String], Option[String], Seq[String])] = {
-    args match {
-      case _ :: _ :: "execute" :: Nil | _ :: "execute" :: Nil | "execute" :: Nil =>
-        Left(new Throwable("missing command to run in affected projects"))
-      case branchToCompare :: "execute" :: tail => Right((Some(branchToCompare), None, tail))
-      case "execute" :: tail                    => Right(None, None, tail)
-      case branchToCompare :: targetBranch :: "execute" :: tail =>
-        Right((Some(branchToCompare), Some(targetBranch), tail))
-      case _ => Left(new Throwable("missing hashes of branches to merge into and working branch"))
     }
   }
 
@@ -133,7 +118,7 @@ object TestAffected extends AutoPlugin {
     val currentProjectId = currentProject.id
 
     val modulesToTest = for {
-      extractedBranchesAndCommand              <- extractHashesAndCommand(args)
+      extractedBranchesAndCommand              <- extractBranchesAndCommand(args)
       (branchToCompare, targetBranch, command) = extractedBranchesAndCommand
       modulesToTest <- affectedProjectReferences(extracted, branchToCompare, targetBranch)
         .toRight[Throwable](new Throwable("Failed to fetch affected projects"))
@@ -153,15 +138,28 @@ object TestAffected extends AutoPlugin {
     }
   }
 
-
-  val diffAffectedProjects = Def.task[Set[ResolvedProject]] {
-    val s =  state.value
+  val diffAffectedProjects = Def.inputTask[Set[ResolvedProject]] {
+    val args: Seq[String]    = spaceDelimited("<arg>").parsed
+    val s                    = state.value
     val extracted: Extracted = Project extract s
     val logger               = extracted.get(sLog)
 
     val currentProject   = extracted.currentProject
     val currentProjectId = currentProject.id
-    ???
+    val modulesToTest = for {
+      extractedBranches               <- extractBranches(args)
+      (branchToCompare, targetBranch) = extractedBranches
+      modulesToTest <- affectedProjectReferences(extracted, branchToCompare, targetBranch)
+        .toRight[Throwable](new Throwable("Failed to fetch affected projects"))
+    } yield modulesToTest
+
+    modulesToTest match {
+      case Right(affectedProjects) => affectedProjects
+      case Left(e) => {
+        logger.error(e.getMessage)
+        Set.empty[ResolvedProject]
+      }
+    }
   }
 
 }
