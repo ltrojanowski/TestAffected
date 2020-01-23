@@ -1,7 +1,6 @@
 package com.ltrojanowski.testaffected
 
-import sbt.{ResolvedProject, SettingKey, TaskKey}
-import sbt.Keys._
+import sbt.{InputKey, ResolvedProject, SettingKey}
 
 trait SettingsKeys {
 
@@ -9,6 +8,6 @@ trait SettingsKeys {
     SettingKey[Seq[String]]("ignored-files-or-dirs", "Specify relative paths of files or directories to exclude")
 
   lazy val diffAffectedProjects =
-    TaskKey[Unit]("diffAffectedProjects", "Returns the set of projects affected by the git diff")
+    InputKey[Set[ResolvedProject]]("diffAffectedProjects", "Returns the set of projects affected by the git diff")
 
 }

@@ -16,7 +16,7 @@ object TestAffected extends AutoPlugin with ArgsExtractors {
       testAffectedCommand,
       inDiffAffectedExecuteCommand
     ),
-    diffAffectedProjects := diffAffectedProjectsTask.inputTaskValue
+    diffAffectedProjects := diffAffectedProjectsTask.evaluated
   )
 
   override def projectSettings: Seq[Def.Setting[_]] = Seq(
@@ -27,6 +27,36 @@ object TestAffected extends AutoPlugin with ArgsExtractors {
     "testAffected",
     "Tests all modules affected by your changes. The changes are resolved using a git diff."
   )(testAffected)
+
+  val diffAffectedProjectsTask = Def.inputTask {
+    val args: Seq[String]    = spaceDelimited("<args>").parsed
+    val s                    = state.value
+    val extracted: Extracted = Project extract s
+    val logger               = extracted.get(sLog)
+
+    args foreach { arg =>
+      logger.info(arg)
+    }
+    val currentProject   = extracted.currentProject
+    val currentProjectId = currentProject.id
+    val modulesToTest = for {
+      extractedBranches               <- extractBranches(args)
+      (branchToCompare, targetBranch) = extractedBranches
+      modulesToTest <- affectedProjectReferences(extracted, branchToCompare, targetBranch)
+        .toRight[Throwable](new Throwable("Failed to fetch affected projects"))
+    } yield modulesToTest
+
+    modulesToTest match {
+      case Right(affectedProjects) => {
+        logger.info(affectedProjects.toString)
+        affectedProjects
+      }
+      case Left(e) => {
+        logger.error(e.getMessage)
+        Set.empty[ResolvedProject]
+      }
+    }
+  }
 
   val inDiffAffectedExecuteCommand = Command.args(
     "inDiffAffected",
@@ -134,30 +164,6 @@ object TestAffected extends AutoPlugin with ArgsExtractors {
       case Left(e) => {
         logger.error(e.getMessage)
         s
-      }
-    }
-  }
-
-  val diffAffectedProjectsTask = Def.inputTask[Set[ResolvedProject]] {
-    val args: Seq[String]    = spaceDelimited("<arg>").parsed
-    val s                    = state.value
-    val extracted: Extracted = Project extract s
-    val logger               = extracted.get(sLog)
-
-    val currentProject   = extracted.currentProject
-    val currentProjectId = currentProject.id
-    val modulesToTest = for {
-      extractedBranches               <- extractBranches(args)
-      (branchToCompare, targetBranch) = extractedBranches
-      modulesToTest <- affectedProjectReferences(extracted, branchToCompare, targetBranch)
-        .toRight[Throwable](new Throwable("Failed to fetch affected projects"))
-    } yield modulesToTest
-
-    modulesToTest match {
-      case Right(affectedProjects) => affectedProjects
-      case Left(e) => {
-        logger.error(e.getMessage)
-        Set.empty[ResolvedProject]
       }
     }
   }
