@@ -49,11 +49,11 @@ object TestAffected extends AutoPlugin with ArgsExtractors {
     modulesToTest match {
       case Right(affectedProjects) => {
         logger.info(affectedProjects.toString)
-        affectedProjects
+        (currentProject, affectedProjects)
       }
       case Left(e) => {
         logger.error(e.getMessage)
-        Set.empty[ResolvedProject]
+        (currentProject, Set.empty[ResolvedProject])
       }
     }
   }
