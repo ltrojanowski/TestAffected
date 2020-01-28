@@ -39,11 +39,11 @@ class GitClientTest extends FlatSpec with BeforeAndAfter {
       s"${GitClientImpl.CHANGED_FILES_CMD_PREFIX} mySha",
       changes.mkString(System.lineSeparator())
     )
-    assert(client.finedChangedFilesSince(sha = "mySha", includeUncommitted = true) == changes)
+    assert(client.findChangedFilesSince(sha = "mySha", includeUncommitted = true) == changes)
   }
 
   it should "find changes since empty" in new Fixture {
-    assert(List.empty[String] == client.finedChangedFilesSince("foo"))
+    assert(List.empty[String] == client.findChangedFilesSince("foo"))
   }
 
   def convertToFilePath(list: String*): String = {
@@ -59,7 +59,7 @@ class GitClientTest extends FlatSpec with BeforeAndAfter {
       s"${GitClientImpl.CHANGED_FILES_CMD_PREFIX} otherSha mySha",
       changes.mkString(System.lineSeparator())
     )
-    assert(changes == client.finedChangedFilesSince(sha = "mySha", top = "otherSha"))
+    assert(changes == client.findChangedFilesSince(sha = "mySha", top = "otherSha"))
   }
 
   class MockCommandRunner extends CommandRunner {

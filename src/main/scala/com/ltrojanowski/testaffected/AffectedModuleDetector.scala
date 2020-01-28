@@ -24,7 +24,7 @@ class AffectedModuleDetectorImpl(
     val changedFiles = for {
       lastMergeSha    <- gitClient.findBranchingPointFromMaster(branchToCompare, targetBranch)
       headOfBranchSha <- gitClient.findHeadOfBranch(branchToCompare)
-    } yield gitClient.finedChangedFilesSince(lastMergeSha, top = headOfBranchSha)
+    } yield gitClient.findChangedFilesSince(lastMergeSha, top = headOfBranchSha)
 
     val changedModules = changedFiles.map(filePaths => filePaths.flatMap(filePathToProject).toSet)
 
