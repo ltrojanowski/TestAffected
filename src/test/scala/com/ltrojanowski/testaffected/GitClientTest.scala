@@ -14,7 +14,7 @@ class GitClientTest extends FlatSpec with BeforeAndAfter {
     val client = new GitClientImpl(
       logger        = new TestLogger(),
       commandRunner = mockCommandRunner,
-      ???
+      List()
     )
   }
 
@@ -36,14 +36,14 @@ class GitClientTest extends FlatSpec with BeforeAndAfter {
       convertToFilePath("d", "e", "f.java")
     )
     mockCommandRunner.addReply(
-      s"${GitClientImpl.CHANGED_FILES_CMD_PREFIX} mySha",
+      s"${GitClientImpl.CHANGED_FILES_CMD_PREFIX} mySha -- . ",
       changes.mkString(System.lineSeparator())
     )
-    assert(client.findChangedFilesSince(sha = "mySha", includeUncommitted = true) == changes)
+    assert(client.findChangedFilesSince(sha = "mySha", top = "otherSha", includeUncommitted = true) == changes)
   }
 
   it should "find changes since empty" in new Fixture {
-    assert(List.empty[String] == client.findChangedFilesSince("foo"))
+    assert(List.empty[String] == client.findChangedFilesSince("foo", "otherSha"))
   }
 
   def convertToFilePath(list: String*): String = {
@@ -56,7 +56,7 @@ class GitClientTest extends FlatSpec with BeforeAndAfter {
       convertToFilePath("d", "e", "f.java")
     )
     mockCommandRunner.addReply(
-      s"${GitClientImpl.CHANGED_FILES_CMD_PREFIX} otherSha mySha",
+      s"${GitClientImpl.CHANGED_FILES_CMD_PREFIX} mySha -- . ",
       changes.mkString(System.lineSeparator())
     )
     assert(changes == client.findChangedFilesSince(sha = "mySha", top = "otherSha"))

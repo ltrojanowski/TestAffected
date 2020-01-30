@@ -55,15 +55,23 @@ class GitClientImpl(
     val pathToGitRepo = PATH_TO_GIT_REPO.runCommand().headOption
     val excludeSuffix = ignoredFilesOrDirs
       .flatMap(ignoredFileOrDir => pathToGitRepo.map(path => s":(exclude)$path$ignoredFileOrDir"))
-      .mkString(" ")
-    logger.info(s"Git diff will exclude the following files:\n${ignoredFilesOrDirs.mkString(" - ", "\n - ", "")}")
-    val changedFiles = (if (includeUncommitted) {
-                          s"$CHANGED_FILES_CMD_PREFIX $sha $excludeSuffix"
-                        } else {
-                          s"$CHANGED_FILES_CMD_PREFIX $top $sha $excludeSuffix"
-                        })
-      .runCommand()
-    logger.info(s"Git diff found the following files changed:\n${changedFiles.mkString(" - ", "\n - ", "")}")
+    if (ignoredFilesOrDirs.isEmpty) {
+      logger.info(s"Git diff will not exclude any files")
+    } else {
+      logger.info(s"Git diff will exclude the following files:\n${ignoredFilesOrDirs.mkString(" - ", "\n - ", "")}")
+    }
+    val changedFiles = (
+      if (includeUncommitted) {
+        s"$CHANGED_FILES_CMD_PREFIX $sha${excludeSuffix.mkString(" -- . ", " ", "")}"
+      } else {
+        s"$CHANGED_FILES_CMD_PREFIX $top $sha${excludeSuffix.mkString(" -- . ", " ", "")}"
+      }
+    ).runCommand()
+    if (changedFiles.isEmpty) {
+      logger.info("Git diff didn't find any changed files")
+    } else {
+      logger.info(s"Git diff found the following files changed:\n${changedFiles.mkString(" - ", "\n - ", "")}")
+    }
     changedFiles
       .flatMap(relativePath => pathToGitRepo.map(_ + File.separator + relativePath))
   }
