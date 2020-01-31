@@ -75,7 +75,7 @@ class GitClientImpl(
   override def findChangedFilesSince(sha: String, top: String, includeUncommitted: Boolean): List[String] = {
     val pathToGitRepo = PATH_TO_GIT_REPO.runCommand().headOption
     val excludeSuffix = ignoredFilesOrDirs
-      .flatMap(ignoredFileOrDir => pathToGitRepo.map(path => s":(exclude)$path$ignoredFileOrDir"))
+      .flatMap(ignoredFileOrDir => pathToGitRepo.map(path => s":(exclude)$path${File.separator}$ignoredFileOrDir"))
     logIgnoredFilesOrDirs(ignoredFilesOrDirs)
     val changedFiles = if (getGitVersion().exists(_ >= "1.9.5")) {
       (
