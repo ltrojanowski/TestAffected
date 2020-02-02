@@ -1,13 +1,10 @@
 package com.ltrojanowski.testaffected
 
-import java.io.{BufferedReader, File, InputStreamReader}
-import java.util.concurrent.TimeUnit
-import java.util.stream.Collectors
-import sys.process._
+import java.io.File
 
 import sbt.util.Logger
 
-import scala.collection.JavaConverters._
+import scala.sys.process._
 
 trait CommandRunner {
   def execute(command: String): List[String]
@@ -73,6 +70,7 @@ class GitClientImpl(
   }
 
   override def findChangedFilesSince(sha: String, top: String, includeUncommitted: Boolean): List[String] = {
+    import Glob2Regex.glob2Regex
     val pathToGitRepo = PATH_TO_GIT_REPO.runCommand().headOption
     val excludeSuffix = ignoredFilesOrDirs
       .flatMap(ignoredFileOrDir => pathToGitRepo.map(path => s":(exclude)$path${File.separator}$ignoredFileOrDir"))
@@ -85,6 +83,7 @@ class GitClientImpl(
           s"$CHANGED_FILES_CMD_PREFIX $top $sha${excludeSuffix.mkString(" -- . ", " ", "")}"
         }
       ).runCommand()
+        .flatMap(file => pathToGitRepo.map(path => s"$path${File.separator}$file"))
     } else {
       (
         if (includeUncommitted) {
@@ -93,16 +92,18 @@ class GitClientImpl(
           s"$CHANGED_FILES_CMD_PREFIX $top $sha"
         }
       ).runCommand()
+        .flatMap(file => pathToGitRepo.map(path => s"$path${File.separator}$file"))
         .filterNot(
           unfilteredFilePath =>
-            ignoredFilesOrDirs.exists(
-              ignoredFile => new Regex(ignoredFile).findFirstIn(unfilteredFilePath).isDefined
-            )
+            ignoredFilesOrDirs
+              .flatMap(relativeIgnoredFile => pathToGitRepo.map(path => s"$path${File.separator}$relativeIgnoredFile"))
+              .exists(
+                ignoredFile => new Regex(glob2Regex(ignoredFile)).findFirstIn(s"$unfilteredFilePath").isDefined
+              )
         )
     }
     logChangedFiles(changedFiles)
     changedFiles
-      .flatMap(relativePath => pathToGitRepo.map(_ + File.separator + relativePath))
   }
 
   override def findPreviousMergeCL(): Option[String] = {
